@@ -41,10 +41,11 @@ let rec simplify expression =
                         | Num a, Sub (r, Num b)
                         | Sub (r, Num b), Num a -> Add (r, Num (a - b))
                         | l, Nega r -> Sub (l, r)
-                        | Mul (a, b), Mul (c, d) when a = c -> Mul (a, Add (b, d)) // ab + ad
-                        | Mul (a, b), Mul (c, d) when a = d -> Mul (a, Add (b, c)) // ab + ca
-                        | Mul (a, b), Mul (c, d) when b = c -> Mul (b, Add (a, d)) // ab + bd
-                        | Mul (a, b), Mul (c, d) when b = d -> Mul (b, Add (a, c)) // ab + cb
+                        | Mul (a, b), Mul (c, d)
+                        | Mul (a, b), Mul (c, d)
+                        | Mul (b, a), Mul (c, d)
+                        | Mul (b, a), Mul (c, d)
+                            when a = c -> Mul (a, Add (b, d)) // ab + ad
                         | l, r -> Add (l, r)
         | Sub (l, r) -> match simplify l, simplify r with
                         | Num l, Num r -> Num (l - r)
@@ -54,8 +55,9 @@ let rec simplify expression =
                         | Num a, Add (r, Num b) // a - (r + b)
                             -> Sub (Num (a - b), r)
                         | Add (Num b, r), Num a // (b + r) - a
-                        | Num a, Sub (r, Num b) // a - (r - b)
                         | Add (r, Num b), Num a // (r + b) - a
+                            -> Add (Num (b - a), r)
+                        | Num a, Sub (r, Num b) // a - (r - b)
                             -> Sub (Num (a + b), r)
                         | Num a, Sub (Num b, r) // a - (b - r)
                             -> Add (Num (a - b), r)
@@ -63,25 +65,25 @@ let rec simplify expression =
                             -> Sub (Num (b - a), r)
                         | Sub (r, Num b), Num a // (r - b) - a
                             -> Sub (r, Num (a + b))
-                        | Mul (a, b), Mul (c, d) when a = c -> Mul (a, Sub (b, d)) // ab - ad
-                        | Mul (a, b), Mul (c, d) when a = d -> Mul (a, Sub (b, c)) // ab - ca
-                        | Mul (a, b), Mul (c, d) when b = c -> Mul (b, Sub (a, d)) // ab - bd
-                        | Mul (a, b), Mul (c, d) when b = d -> Mul (b, Sub (a, c)) // ab - cb
+                        | Mul (a, b), Mul (c, d)
+                        | Mul (a, b), Mul (d, c)
+                        | Mul (b, a), Mul (c, d)
+                        | Mul (b, a), Mul (d, c)
+                            when a = c -> Mul (a, Sub (b, d)) // ab - ad
                         | l, Nega r -> Add (l, r)
                         | l, r when l = r -> Num 0
                         | l, r -> Sub (l, r)
         | Mul (l, r) -> match simplify l, simplify r with
                         | Num l, Num r -> Num (l * r)
-                        | Num 1, r -> r
-                        | l, Num 1 -> l
+                        | Num 1, a | a, Num 1 -> a
                         | Num -1, r -> Nega r
                         | l, Num -1 -> Nega l
-                        | Num 0, _ -> Num 0
-                        | _, Num 0 -> Num 0
+                        | Num 0, _ | _, Num 0 -> Num 0
                         | Num a, Mul (Num b, r)
                         | Num a, Mul (r, Num b)
                         | Mul (Num b, r), Num a
                         | Mul (r, Num b), Num a -> Mul (Num (a * b), r)
+                        | Nega l, r | l, Nega r -> Nega (Mul (l, r))
                         | l, r -> Mul (l, r)
         | Div (l, r) -> match simplify l, simplify r with
                         | l, r when l = r -> Num 1
@@ -90,10 +92,13 @@ let rec simplify expression =
                         | l, Num 1 -> l
                         | l, Num -1 -> Nega l
                         | Num 0, _ -> Num 0
-                        | Mul (a, b), c when b = c -> a
-                        | Mul (a, b), c when a = c -> b
-                        | Mul (a, b), Nega c when b = c -> Nega a
-                        | Mul (a, b), Nega c when a = c -> Nega b
+                        | Mul (a, b), c
+                        | Mul (b, a), c
+                            when b = c -> a
+                        | Mul (a, b), Nega c
+                        | Mul (b, a), Nega c
+                            when b = c -> Nega a
+                        | Nega l, Nega r -> Div (l, r)
                         | l, r -> Div (l, r)
         | Nega e -> match simplify e with
                     | Num i -> Num -i
